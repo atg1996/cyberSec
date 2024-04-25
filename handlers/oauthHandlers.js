@@ -13,6 +13,7 @@ const oauthConfig = {
 async function login(req, res) {
     const redirectURL = `${oauthConfig.authorizationURL}?client_id=${oauthConfig.clientID}&redirect_uri=${oauthConfig.callbackURL}&response_type=code`;
     res.redirect(redirectURL);
+    console.log("frontend redirect url", redirectURL)
 }
 
 
