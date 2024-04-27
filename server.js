@@ -1,5 +1,5 @@
 const express = require('express');
-const oauthServer = require('oauth2-server');
+const OauthServer = require('oauth2-server');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 
@@ -9,67 +9,20 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Mock data (replace with actual data in production)
-const clients = [
-    { id: '111', secret: '222aaaaaccccc', redirectUris: ['http://localhost:3000/auth/dashboard'] ,grants: ['authorization_code', 'client_credentials']}
-];
+
 
 const users = [
     { id: 1, username: 'test_user', password: 'test_password' },
 ];
 
-const axios = require('axios');
+const localModal = require('./model.js')
 
-const oauth = new oauthServer({
-    model: {
-        getClient: (clientId, clientSecret, callback) => {
-            const client = clients.find(c => c.id === clientId && c.secret === clientSecret);
-            if (!client) return callback('Invalid client');
-            return callback(null, client);
-        },
-        grantTypeAllowed: (clientId, grantType, callback) => {
-            // All grant types are allowed for simplicity (should be restricted in production)
-            return callback(null, true);
-        },
-        getUser: (username, password, callback) => {
-            const user = users.find(u => u.username === username && u.password === password);
-            if (!user) return callback('Invalid user');
-            return callback(null, user);
-        },
-        saveToken: (token, client, user, callback) => {
-            // Mock implementation, should save token in database in production
-            return callback(null);
-        },
-        getAuthorizationCode: (code, callback) => {
-            // Calculate expiration time
-            const expirationTime = new Date();
-            expirationTime.setMinutes(expirationTime.getMinutes() + 30); // Expires in 30 minutes
-
-            // Mock implementation, replace with actual logic to retrieve the authorization code
-            return callback(null, {
-                authorizationCode: code,
-                expiresAt: expirationTime, // Set the expiration date/time for the authorization code
-                redirectUri: 'http://localhost:3000/auth/dashboard', // Set the redirect URI associated with the code
-                client: {
-                    id: '111', // Client ID associated with the authorization code
-                    redirectUris: ['http://localhost:3000/auth/dashboard'], // Client's redirect URIs
-                },
-                user: {
-                    id: '1', // User ID associated with the authorization code
-                },
-            });
-        },
-        revokeAuthorizationCode: (code, callback) => {
-            // Mock implementation, replace with actual logic to revoke the authorization code
-            return callback(null, true); // Assume successful revocation
-        },
-    },
+const oauth = new OauthServer({
+    model: localModal,
+    accessTokenLifetime: 60 * 60 * 24, // 24 hours, or 1 day
+    allowEmptyState: true,
+    allowExtendedTokenAttributes: true,
 });
-
-
-
-
-
 
 // Authorization endpoint
 app.get('/oauth/authorize', (req, res) => {
@@ -111,8 +64,8 @@ app.post('/oauth/authorize', (req, res) => {
 app.post('/oauth/token', (req, res) => {
     console.log("request body",req.body)
     try {
-        const request = new oauthServer.Request(req);
-        const response = new oauthServer.Response(res);
+        const request = new OauthServer.Request(req);
+        const response = new OauthServer.Response(res);
 
         oauth.token(request, response)
             .then(token => {
